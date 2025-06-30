@@ -1,0 +1,199 @@
+# Terraform Files
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+.terraform/
+.terraform.lock.hcl
+terraform.tfplan
+terraform.tfplan.*
+.terraformrc
+terraform.rc
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files, which are likely to contain sensitive data
+# such as passwords, ssh keys, and other secrets
+*.tfvars
+*.tfvars.json
+
+# Ignore override files as they are usually used to override resources locally
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Include override files you do wish to add to version control using negated pattern
+# !example_override.tf
+
+# Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
+# example: *tfplan*
+
+# Azure CLI
+.azure/
+
+# Google Cloud SDK
+.config/gcloud/
+.gcloud/
+
+# SSH Keys (if any are generated)
+*.pem
+*.key
+id_rsa*
+*.pub
+
+# Backup files
+*.backup
+*.bak
+*~
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+logs/
+terraform.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Documentation build files
+site/
+docs/_build/
+
+# Python (if using any Python scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# Node.js (if using any Node.js tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local state files and sensitive data
+terraform.tfstate.d/
+*.auto.tfvars
+secrets.tfvars
+sensitive.tfvars
+
+# Output files
+outputs.json
+outputs.txt
+infrastructure-snapshot.txt
+managed-resources.txt
+azure-resources.txt
+gcp-resources.txt
+
+# Test files
+test-*.txt
+*-test.tf
+test/
+
+# Personal notes
+notes.txt
+todo.txt
+scratch.txt
+
+# Monitoring and debugging
+*.pcap
+*.cap
+
+# Certificate files
+*.crt
+*.cert
+*.ca-bundle
+*.p12
+*.p7b
+*.pfx
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+
+# Local configuration
+.local/
+local.tf
+local.tfvars
+
+# Terraform Enterprise/Cloud
+.tfe/
+
+# InSpec files (if using for testing)
+inspec.lock
+
+# Packer files (if building custom images)
+packer_cache/
+*.iso
+
+# Ansible files (if using for configuration management)
+*.retry
+.vault_pass
+
+# Docker files (if containerizing anything)
+.dockerignore
+Dockerfile.local
+
+# Kubernetes files (if deploying K8s resources)
+kubeconfig
+*.kubeconfig
+
+# Azure specific
+.azure-pipelines/
+azure-pipelines-variables.yml
+
+# GCP specific
+service-account.json
+*-service-account.json
+credentials.json
+*-credentials.json
+
+# AWS specific (for future expansion)
+.aws/
+credentials
+
+# Custom project excludes
+teardown-completed.txt
+deployment-notes.txt
+vpn-backup-*.tar.gz
+
+# Include sample/template files
+!terraform.tfvars.example
+!sample.tfvars
+!template.tf
+
+# Exclude any accidental sensitive file uploads
+*password*
+*secret*
+*private*
+*confidential*
