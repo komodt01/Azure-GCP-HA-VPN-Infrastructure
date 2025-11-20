@@ -1,210 +1,239 @@
-# Technologies Deep Dive
+# 🧩 Technologies Used  
+## Azure ↔ GCP High Availability (HA) VPN Infrastructure
 
-## Infrastructure as Code
+This document explains **what each technology is**, **why it is used**, and **how it works within this project**. It is written for architects, engineers, and hiring managers evaluating multi-cloud networking and security capabilities.
 
-### Terraform
-**What it is**: HashiCorp Terraform is an open-source infrastructure as code software tool that enables you to safely and predictably create, change, and improve infrastructure.
+---
 
-**How it works**:
-- Uses declarative configuration language (HCL)
-- Maintains state of infrastructure resources
-- Plans changes before applying them
-- Supports multiple cloud providers through plugins
+# 1. Microsoft Azure Technologies
 
-**Key Components**:
-- **Providers**: Plugins that interact with cloud APIs (Azure, GCP)
-- **Resources**: Infrastructure components (VMs, networks, etc.)
-- **Modules**: Reusable sets of Terraform configuration
-- **State**: Record of infrastructure and configuration
+## 1.1 Azure Virtual Network (VNet)
+**What it is:**  
+Azure’s foundational private network boundary that hosts subnets, virtual machines, gateways, and routing components.
 
-**In this project**: Manages entire VPN infrastructure across Azure and GCP with modular, reusable code.
+**Why it’s used:**  
+To provide an isolated address space for workloads that will communicate with Google Cloud through HA VPN.
 
-## Cloud Networking Technologies
+**How it works here:**  
+The VNet contains a **GatewaySubnet** that hosts the Azure VPN Gateway in active/active mode.
 
-### Azure Virtual Network Gateway
-**What it is**: Microsoft Azure's managed VPN service that provides secure connectivity between Azure virtual networks and on-premises networks.
+---
 
-**How it works**:
-- **Route-Based VPN**: Uses IP routing to direct packets through tunnels
-- **Active-Active Configuration**: Two gateway instances for high availability
-- **BGP Support**: Dynamic routing protocol for automatic route discovery
-- **IPSec Tunnels**: Encrypted connections using industry-standard protocols
+## 1.2 Azure VPN Gateway (Active/Active)
+**What it is:**  
+A managed IPSec VPN service that supports site-to-site connections with high availability.
 
-**Components**:
-- **Gateway Subnet**: Special subnet required for VPN gateway deployment
-- **Public IP Addresses**: External endpoints for VPN connections
-- **Local Network Gateways**: Representation of remote networks
-- **Connections**: Actual tunnel configurations
+**Why it’s used:**  
+Azure’s VPN Gateway in **active/active** mode provides two gateway instances, enabling multiple redundant tunnels to GCP.
 
-### Google Cloud HA VPN
-**What it is**: Google Cloud Platform's high availability VPN service that provides 99.99% SLA for VPN connectivity.
+**How it works here:**  
+- Deploys two VPN Gateway instances  
+- Each instance has its own public IP  
+- Each instance establishes IPSec tunnels to GCP HA VPN interfaces  
+- Supports dynamic routing (BGP)
 
-**How it works**:
-- **HA VPN Gateway**: Automatically provides two external IP addresses
-- **Cloud Router**: Manages BGP sessions and route advertisements
-- **External VPN Gateway**: Represents peer VPN endpoints
-- **Redundancy**: Built-in high availability without manual configuration
+---
 
-**Components**:
-- **VPN Interfaces**: Two interfaces for redundant connections
-- **VPN Tunnels**: Encrypted pathways to remote networks
-- **Router Interfaces**: BGP peering endpoints
-- **Router Peers**: BGP session configurations
+## 1.3 Public IP Addresses
+**What they are:**  
+Static public IP resources assigned to the Azure VPN Gateway.
 
-## Networking Protocols
+**Why used:**  
+Required for GCP to establish inbound IPSec tunnels to Azure’s gateway instances.
 
-### IPSec (Internet Protocol Security)
-**What it is**: A protocol suite for securing Internet Protocol communications by authenticating and encrypting each IP packet.
+**How used here:**  
+Azure Gateway generates **two public IPs**, one per active instance—supporting full HA mesh tunnel creation.
 
-**How it works**:
-- **Authentication Header (AH)**: Provides data integrity and authentication
-- **Encapsulating Security Payload (ESP)**: Provides data confidentiality, integrity, and authentication
-- **Security Associations (SA)**: Security parameters for communication
-- **Internet Key Exchange (IKE)**: Protocol for establishing SAs
+---
 
-**In VPN Context**:
-- Encrypts data in transit between cloud networks
-- Ensures data integrity and authenticity
-- Provides perfect forward secrecy
-- Uses pre-shared keys for authentication
+## 1.4 Local Network Gateway
+**What it is:**  
+Azure’s representation of an external VPN endpoint.
 
-### BGP (Border Gateway Protocol)
-**What it is**: The standardized exterior gateway protocol designed to exchange routing and reachability information among autonomous systems.
+**Why used:**  
+Required to define GCP’s HA VPN gateway IPs and advertised prefixes.
 
-**How it works**:
-- **Path Vector Protocol**: Maintains path information to prevent loops
-- **AS Numbers**: Unique identifiers for autonomous systems
-- **Route Advertisement**: Sharing network reachability information
-- **Route Selection**: Algorithm for choosing best paths
+**How it works here:**  
+Each GCP interface is mapped as a local network gateway to connect Azure tunnels to specific GCP IP endpoints.
 
-**Key Features**:
-- **Autonomous System Numbers**: This project uses ASN 65515 (Azure) and 65001 (GCP)
-- **BGP Peering**: Direct communication between routers
-- **Route Propagation**: Automatic sharing of network routes
-- **Failover**: Automatic rerouting when paths become unavailable
+---
 
-## Security Technologies
+# 2. Google Cloud Technologies
 
-### Pre-Shared Keys (PSK)
-**What it is**: Symmetric authentication method where both parties share a secret key.
+## 2.1 Google Cloud VPC
+**What it is:**  
+GCP’s global private network for hosting workloads and subnets.
 
-**How it works**:
-- Same key configured on both VPN endpoints
-- Used for initial authentication in IKE negotiation
-- Must be kept secure and rotated regularly
-- Simpler than certificate-based authentication
+**Why used:**  
+Acts as the GCP network side of the Azure ↔ GCP connection.
 
-**Best Practices**:
-- Use strong, random keys (32+ characters)
-- Rotate keys regularly
-- Store securely (key vaults, encrypted storage)
-- Avoid embedding in code or documentation
+**How it works here:**  
+The VPC hosts subnets reachable through the HA VPN and advertised through BGP.
 
-### Network Security Groups (Azure) / Firewall Rules (GCP)
-**What they are**: Cloud-native firewall services that control network traffic to and from cloud resources.
+---
 
-**How they work**:
-- **Stateful Filtering**: Track connection state for return traffic
-- **Rule-Based**: Allow/deny based on source, destination, port, protocol
-- **Priority-Based**: Rules evaluated in order of priority
-- **Default Deny**: Block traffic unless explicitly allowed
+## 2.2 Google Cloud HA VPN Gateway
+**What it is:**  
+GCP’s high-availability IPSec VPN service offering **two gateway interfaces**, each capable of creating two tunnels.
 
-**Common Rules**:
-- Allow ICMP for connectivity testing
-- Allow SSH (22) and RDP (3389) for management
-- Allow application-specific ports
-- Allow traffic from partner networks
+**Why used:**  
+To build a true high-availability connection with redundancy across:
+- Interfaces  
+- Tunnels  
+- Physical gateways  
 
-## Monitoring and Diagnostics
+**How it works here:**  
+- Interface 0 → two tunnels to Azure gateway IPs  
+- Interface 1 → two tunnels to Azure gateway IPs  
+Creates **four tunnels total** in full mesh.
 
-### Azure Monitor
-**What it is**: Comprehensive monitoring solution for collecting, analyzing, and responding to telemetry from cloud and on-premises environments.
+---
 
-**VPN-Specific Metrics**:
-- **Connection Status**: Up/down state of VPN tunnels
-- **Bandwidth Utilization**: Data transfer rates
-- **Packet Drop Rate**: Network performance indicators
-- **BGP Route Count**: Number of routes learned/advertised
+## 2.3 Google Cloud Router (BGP)
+**What it is:**  
+A managed BGP router that dynamically exchanges routes with external peers.
 
-### Google Cloud Monitoring
-**What it is**: Google's monitoring service that provides visibility into the performance, uptime, and overall health of cloud-powered applications.
+**Why used:**  
+Enables dynamic routing and automatic failover without manual route management.
 
-**VPN Monitoring**:
-- **Tunnel State**: Operational status of VPN tunnels
-- **Received/Sent Bytes**: Traffic volume metrics
-- **BGP Session State**: Routing protocol health
-- **Gateway Utilization**: Resource consumption
+**How it works here:**  
+- Cloud Router peers with Azure VPN Gateway instances  
+- Advertises GCP subnets to Azure  
+- Accepts Azure prefixes for return traffic  
+- Reacts to tunnel failures instantly
 
-## Infrastructure Components
+---
 
-### Resource Groups (Azure)
-**What they are**: Logical containers that hold related resources for an Azure solution.
+# 3. Networking & Security Protocols
 
-**Benefits**:
-- Organized resource management
-- Simplified billing and cost tracking
-- Bulk operations (delete, move, etc.)
-- Access control boundaries
+## 3.1 IPSec  
+**What it is:**  
+Industry-standard encryption protocol for site-to-site VPN tunnels.
 
-### Projects (GCP)
-**What they are**: Fundamental organizing entity in Google Cloud that contains resources, settings, and metadata.
+**Why used:**  
+Provides end-to-end encryption for all traffic between Azure and GCP.
 
-**Functions**:
-- Resource isolation and organization
-- Billing account association
-- API and service management
-- Identity and access management
+**How used:**  
+All four tunnels between Azure and GCP are IPSec/IKEv2 encrypted.
 
-## High Availability Design
+---
 
-### Active-Active Configuration
-**What it is**: A high availability setup where multiple instances operate simultaneously to provide redundancy.
+## 3.2 IKEv2  
+**What it is:**  
+A secure key exchange protocol used by IPSec VPN tunnels.
 
-**Benefits**:
-- No single point of failure
-- Load distribution across instances
-- Faster failover times
-- Better resource utilization
+**Why used:**  
+Provides faster negotiation, improved reconnection, and better HA behavior compared to IKEv1.
 
-**Implementation**:
-- Two VPN gateway instances in Azure
-- Two external IP addresses
-- Separate BGP sessions
-- Automatic traffic distribution
+**How used:**  
+Used for all tunnel negotiations across the Azure ↔ GCP mesh.
 
-### Route Redundancy
-**What it is**: Multiple network paths to the same destination for failover and load balancing.
+---
 
-**How it works**:
-- BGP advertises multiple paths
-- Best path selection based on metrics
-- Automatic failover when primary path fails
-- Load balancing across available paths
+## 3.3 BGP (Border Gateway Protocol)
+**What it is:**  
+A dynamic routing protocol used across large networks.
 
-## Performance Optimization
+**Why used:**  
+- Automatically advertises prefixes  
+- Handles failover without manual route changes  
+- Ensures routes stay consistent across multiple tunnels
 
-### BGP Route Optimization
-- **AS Path Length**: Shorter paths preferred
-- **Local Preference**: Internal routing preference
-- **MED (Multi-Exit Discriminator)**: Influence inbound traffic
-- **Route Dampening**: Prevent route flapping
+**How used:**  
+Each Azure gateway instance forms BGP sessions with each GCP Cloud Router interface.
 
-### MTU Considerations
-- **Path MTU Discovery**: Determine optimal packet size
-- **Fragmentation Avoidance**: Prevent packet splitting
-- **Performance Impact**: Larger packets improve efficiency
-- **Tunnel Overhead**: Account for encapsulation headers
+---
 
-## Automation and DevOps
+# 4. Terraform (Infrastructure-as-Code)
 
-### Infrastructure as Code Benefits
-- **Version Control**: Track infrastructure changes
-- **Reproducibility**: Consistent deployments
-- **Collaboration**: Team-based infrastructure management
-- **Testing**: Validate changes before deployment
+## 4.1 Terraform CLI  
+**What it is:**  
+Infrastructure-as-code tool for declaratively building multi-cloud infrastructure.
 
-### CI/CD Integration
-- **Automated Testing**: Validate configurations
-- **Staged Deployments**: Dev → Test → Prod progression
-- **Rollback Capabilities**: Quick recovery from issues
-- **Change Management**: Controlled infrastructure updates
+**Why used:**  
+Ensures reproducible deployments in Azure and GCP with version-controlled configuration.
+
+**How used:**  
+- Creates Azure VPN Gateway, public IPs, VNets  
+- Creates GCP VPC, HA VPN, Cloud Router  
+- Configures tunnels, routing, and BGP  
+- Supports teardown (`terraform destroy`) to minimize lab costs
+
+---
+
+## 4.2 Terraform AzureRM Provider
+**What it is:**  
+Terraform plugin for managing Azure resources.
+
+**Why used:**  
+Required to deploy Azure VNet, VPN Gateway, GatewaySubnet, etc.
+
+---
+
+## 4.3 Terraform Google Provider
+**What it is:**  
+Terraform plugin for managing GCP resources.
+
+**Why used:**  
+Required to deploy HA VPN, Cloud Router, and GCP VPC.
+
+---
+
+# 5. CLI Tools
+
+## 5.1 Azure CLI  
+Used for:  
+- Verifying gateway configuration  
+- Inspecting BGP sessions  
+- Checking VPN connection health  
+
+---
+
+## 5.2 Google Cloud CLI (`gcloud`)  
+Used for:  
+- Troubleshooting HA VPN tunnels  
+- Viewing BGP route advertisements  
+- Fetching gateway and interface details  
+
+---
+
+# 6. Observability Technologies
+
+## 6.1 Azure Log Analytics  
+**Why used:**  
+To monitor gateway logs such as:
+- Tunnel state changes  
+- IKE negotiation events  
+- BGP session events  
+
+---
+
+## 6.2 Google Cloud Logging  
+**Why used:**  
+Captures HA VPN logs for:
+- Tunnel up/down events  
+- BGP updates  
+- Tunnel negotiations and failures  
+
+---
+
+# 7. Optional Tools (for validation)
+
+## 7.1 `ping` / `tracepath` / `traceroute`
+Used to verify:
+- Cross-cloud reachability  
+- Failover paths  
+- Latency  
+- Route change behavior  
+
+---
+
+## 7.2 Netcat or HTTP Test Server
+Used to validate application-level connectivity across the HA VPN.
+
+---
+
+# ✔️ Summary
+
+This project uses a combination of **Azure native networking**, **GCP HA VPN**, **IPSec tunnels**, **BGP dynamic routing**, and **Terraform automation** to build a realistic, resilient multi-cloud network. These technologies demonstrate how a Cloud Security Architect designs secure, fault-tolerant, cloud-agnostic connectivity between major cloud platforms.
+
