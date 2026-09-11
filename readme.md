@@ -3,6 +3,25 @@ Secure Multi-Cloud Connectivity with IPSec, IKEv2, BGP, and Native Cloud Tools
 
 ---
 
+## Architecture Case Studies
+
+This repository includes two architecture case studies that extend the original Azure-GCP HA VPN implementation into a hypothetical regulated financial-services environment.
+
+The scenario examines how the connectivity pattern could support an Azure-hosted real-time payments application that depends on a GCP fraud/risk capability.
+
+- [Executive Case Study](Executive_Case_Study.md) — Examines the business problem, data considerations, security and trust boundaries, resilience, business continuity, governance, and executive visibility.
+
+- [Technical Case Study](Technical_Case_Study.md) — Examines the technical architecture, cross-cloud routing, segmentation, encryption, workload identity, fraud-decision timeout handling, durable messaging, monitoring, failover, incident response, and operational controls.
+
+### Project Scope Note
+
+The original project demonstrates the technical implementation of resilient Azure-to-GCP VPN connectivity using redundant VPN tunnels, IPsec/IKEv2, and BGP dynamic routing.
+
+The case studies extend that implementation into a hypothetical production scenario to demonstrate the additional architecture decisions I would evaluate for a regulated financial institution supporting a real-time payment workload.
+
+Controls, processes, application components, and production recommendations discussed in the case studies should not be interpreted as functionality implemented in the original PoC unless specifically identified as such.
+
+
 ## 📌 Project Overview
 
 This project implements a **high-availability site-to-site VPN** between **Microsoft Azure** and **Google Cloud Platform (GCP)** using only:
